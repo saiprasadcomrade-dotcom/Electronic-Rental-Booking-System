@@ -1,10 +1,30 @@
 node_modules/
 dist/
+
+# Environment variables - NEVER commit these
 .env
+.env.*
+backend/.env
+frontend/.env
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+database/rental.db
+
+# Logs
 *.log
 backend.log
 frontend.log
 backend.err.log
 frontend.err.log
+
+# Temp / test files
+booking1.json
 booking2.json
-rental.db
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
