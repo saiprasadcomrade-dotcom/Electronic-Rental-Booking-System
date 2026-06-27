@@ -4,7 +4,6 @@ import { useAuth } from "./context/AuthContext";
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminDevices from "./pages/AdminDevices";
 import AdminCustomers from "./pages/AdminCustomers";
@@ -46,7 +45,6 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
 
         {/* Protected Admin Routes */}
         <Route 

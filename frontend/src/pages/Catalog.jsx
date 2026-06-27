@@ -47,7 +47,7 @@ const Catalog = () => {
     if (searchQuery) setActiveCategory('All'); 
   }, [searchQuery]);
 
-  const categories = ['All', 'Laptop', 'Camera', 'Printer', 'Drone', 'Audio', 'Display', 'Gaming', 'Tablet', 'Smartphone', 'VR', 'Lighting', 'Grip', 'Accessories'];
+  const categories = ['All', 'Laptop', 'Camera', 'Drone', 'Tablet', 'Projector', 'Speaker', 'Gaming Console', 'Virtual Reality', 'Smart TV', 'Audio', 'Gaming', 'Smartphone', 'Display', 'VR', 'Printer', 'Lighting', 'Grip', 'Accessories'];
 
   let filteredDevices = devices.filter(d => {
     const mc = activeCategory === 'All' || d.category === activeCategory;
@@ -56,10 +56,10 @@ const Catalog = () => {
   });
 
   const sorted = [...filteredDevices].sort((a, b) => {
-    if (sortBy === 'price-low') return a.daily_rate - b.daily_rate;
-    if (sortBy === 'price-high') return b.daily_rate - a.daily_rate;
+    if (sortBy === 'price-low') return (a.rental_price || 0) - (b.rental_price || 0);
+    if (sortBy === 'price-high') return (b.rental_price || 0) - (a.rental_price || 0);
     if (sortBy === 'name') return a.name.localeCompare(b.name);
-    if (sortBy === 'stock') return (a.available_qty || 0) - (b.available_qty || 0);
+    if (sortBy === 'stock') return (a.availableQuantity || 0) - (b.availableQuantity || 0);
     return 0;
   });
 
@@ -72,7 +72,7 @@ const Catalog = () => {
   const openAddModal = () => { setEditingDevice(null); setForm(emptyForm); setShowModal(true); };
   const openEditModal = (device) => {
     setEditingDevice(device);
-    setForm({ name: device.name, category: device.category, daily_rate: device.daily_rate, total_qty: device.total_qty, available_qty: device.available_qty, image_url: device.image_url || '', description: device.description || '' });
+    setForm({ name: device.name, category: device.category, daily_rate: device.rental_price, total_qty: device.totalQuantity, available_qty: device.availableQuantity, image_url: device.image_url || '', description: device.description || '' });
     setShowModal(true);
   };
 
@@ -109,9 +109,9 @@ const Catalog = () => {
   };
 
   const toggleStock = async (device) => {
-    const newAvailable = device.available_qty > 0 ? 0 : device.total_qty;
+    const newAvailable = device.availableQuantity > 0 ? 0 : device.totalQuantity;
     try { 
-      await api.put(`/devices/${device.id}`, { available_qty: newAvailable }); 
+      await api.put(`/devices/${device.id}`, { availableQuantity: newAvailable }); 
       fetchDevices(); 
     } catch { 
       alert('Failed to update stock'); 
@@ -185,7 +185,7 @@ const Catalog = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {sorted.map((device) => {
           const inCart = cart.find(item => item.id === device.id);
-          const outOfStock = device.available_qty <= 0;
+          const outOfStock = (device.availableQuantity ?? device.available_qty ?? 0) <= 0;
           const ratings = (4.0 + (device.id % 10) * 0.1).toFixed(1);
           const reviewCount = 20 + (device.id * 7) % 150;
           
@@ -227,7 +227,7 @@ const Catalog = () => {
                   {device.name}
                 </Link>
 
-                {isAdmin && <p className="text-[9px] text-slate-500">Live Stock: <span className={device.available_qty > 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{device.available_qty}/{device.total_qty}</span></p>}
+                {isAdmin && <p className="text-[9px] text-slate-500">Live Stock: <span className={(device.availableQuantity ?? device.available_qty ?? 0) > 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{device.availableQuantity ?? device.available_qty ?? 0}/{device.totalQuantity ?? device.total_qty ?? 0}</span></p>}
                 
                 {!isAdmin && (
                   <div className="flex items-center gap-1">
@@ -241,7 +241,7 @@ const Catalog = () => {
 
                 <div className="mt-auto pt-2">
                   <div className="flex items-baseline gap-1 mb-2.5">
-                    <span className="text-base font-black text-white">₹{device.daily_rate}</span>
+                    <span className="text-base font-black text-white">₹{device.rental_price || device.daily_rate || 0}</span>
                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">/ day</span>
                   </div>
 

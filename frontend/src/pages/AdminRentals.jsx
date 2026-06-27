@@ -194,16 +194,16 @@ const AdminRentals = () => {
     try {
       const res = await api.post('/booking/confirm', { booking_id: id });
       showToast('Booking Confirmed', 'success');
-      if (res.data.emailStatus === 'Sent') {
-        showToast('Email Sent Successfully!', 'success');
-      } else {
-        showToast('Email Sent Failed. Click to check diagnostics.', 'error');
+      if (res.data.emailStatus?.startsWith('Sent')) {
+        showToast(`Email ${res.data.emailStatus}!`, 'success');
+      } else if (res.data.emailStatus === 'Failed' || res.data.emailStatus === 'Not Configured') {
+        showToast('Email Notification Failed', 'error');
         const rentalObj = rentals.find(r => r.id === id);
         setActiveEmailError({
-          error: res.data.emailError || 'SMTP connection timed out or credentials invalid.',
-          stack: res.data.emailStack || 'No stack trace provided by backend.',
           to: rentalObj?.customer_email || 'customer@example.com',
-          type: 'Booking Confirmation'
+          error: res.data.emailError || 'Unknown Error',
+          stack: res.data.emailStack || '',
+          status: res.data.emailStatus
         });
       }
       fetchData();
@@ -217,15 +217,15 @@ const AdminRentals = () => {
     try {
       const res = await api.post('/booking/return', { booking_id: selectedRental.id, ...returnForm });
       showToast('Device Returned Successfully!', 'success');
-      if (res.data.emailStatus === 'Sent') {
-        showToast('Email Sent Successfully!', 'success');
-      } else {
-        showToast('Email Sent Failed. Click to check diagnostics.', 'error');
+      if (res.data.emailStatus?.startsWith('Sent')) {
+        showToast(`Email ${res.data.emailStatus}!`, 'success');
+      } else if (res.data.emailStatus === 'Failed' || res.data.emailStatus === 'Not Configured') {
+        showToast('Email Notification Failed', 'error');
         setActiveEmailError({
-          error: res.data.emailError || 'SMTP connection timed out or credentials invalid.',
-          stack: res.data.emailStack || 'No stack trace provided by backend.',
           to: selectedRental?.customer_email || 'customer@example.com',
-          type: 'Return Confirmation'
+          error: res.data.emailError || 'Unknown Error',
+          stack: res.data.emailStack || '',
+          status: res.data.emailStatus
         });
       }
       setShowReturnModal(false);
@@ -874,21 +874,40 @@ const AdminRentals = () => {
                 <AlertTriangle size={24} />
                 <h2 className="text-base font-black uppercase tracking-wider">SMTP Email Delivery Failure</h2>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                The action completed, but the notification email to <strong className="text-slate-800">{activeEmailError.to}</strong> failed to send.
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                The action completed successfully, but the notification email to <strong className="text-slate-800">{activeEmailError.to}</strong> failed to send.
               </p>
               
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mt-4">
-                <p className="text-xs font-bold text-slate-700">Error Message:</p>
-                <p className="text-xs font-mono text-rose-600 mt-1 break-all bg-white p-2 rounded border border-rose-100">{activeEmailError.error}</p>
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Detailed Diagnostics</h3>
+                
+                <div className="mb-2">
+                  <span className="text-xs font-bold text-slate-500 w-24 inline-block">Status:</span>
+                  <span className="text-xs font-mono text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">{activeEmailError.status}</span>
+                </div>
+                
+                <div className="mb-2">
+                  <span className="text-xs font-bold text-slate-500 w-24 inline-block align-top">Exact Error:</span>
+                  <span className="text-xs font-mono text-slate-700 inline-block w-[calc(100%-6rem)] break-words">{activeEmailError.error}</span>
+                </div>
+                
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-800 font-bold mb-1">Suggested Fix:</p>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    If you see a <strong>"Connection timeout"</strong> error, it means your local network ISP or Antivirus (e.g. McAfee/Avast) is physically blocking outgoing connections to Gmail on port 465/587. <br/><br/>
+                    <strong>To fix this:</strong> Connect your PC to a mobile hotspot or temporarily disable your Antivirus Firewall shield.
+                  </p>
+                </div>
               </div>
               
-              <div className="bg-slate-950 rounded-xl p-3 mt-4 max-h-64 overflow-auto font-mono text-[10px] text-slate-300 leading-normal border border-slate-900 relative">
-                <div className="absolute top-2 right-2 bg-slate-800 text-[8px] font-bold text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-wider select-none">
-                  Stack Trace
+              {activeEmailError.stack && (
+                <div className="bg-slate-950 rounded-xl p-3 mt-4 max-h-48 overflow-auto font-mono text-[10px] text-slate-300 leading-normal border border-slate-900 relative">
+                  <div className="absolute top-2 right-2 bg-slate-800 text-[8px] font-bold text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-wider select-none">
+                    Stack Trace
+                  </div>
+                  <pre className="whitespace-pre-wrap mt-2 select-text">{activeEmailError.stack}</pre>
                 </div>
-                <pre className="whitespace-pre-wrap mt-2 select-text">{activeEmailError.stack}</pre>
-              </div>
+              )}
             </div>
             <button
               onClick={() => setActiveEmailError(null)}

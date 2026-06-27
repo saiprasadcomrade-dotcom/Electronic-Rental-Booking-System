@@ -23,15 +23,7 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  // Handle prefill if redirected with ?demo=true
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('demo') === 'true') {
-      setEmail('onepointsolutions16@gmail.com');
-      setPassword('admin@123');
-      showToast('Demo credentials prefilled. Click Sign In to launch!', 'info');
-    }
-  }, [location.search, showToast]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,20 +44,7 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      await loginWithGoogle();
-      showToast('Logged in successfully via Google!', 'success');
-      navigate('/admin/dashboard', { replace: true });
-    } catch (err) {
-      if (err.message !== 'Google sign-in cancelled.') {
-        showToast(err.message, 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-[#0B1120] text-slate-100 flex flex-col justify-between py-12 relative overflow-hidden font-sans">
@@ -150,33 +129,7 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="relative flex items-center justify-center my-4">
-            <div className="border-t border-slate-800 w-full"></div>
-            <span className="bg-[#0B1120] px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest absolute">Or</span>
-          </div>
 
-          <button 
-            type="button" 
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full py-3 bg-slate-900 border border-slate-800 text-slate-300 font-semibold text-xs rounded-xl hover:bg-slate-800/80 transition-all cursor-pointer flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.13-5.136 4.13A5.79 5.79 0 0 1 8.2 12.74a5.79 5.79 0 0 1 5.79-5.79c1.498 0 2.861.567 3.905 1.5l3.051-3.05A9.95 9.95 0 0 0 13.99 2C8.47 2 4 6.47 4 12s4.47 10 9.99 10c5.3 0 9.61-3.8 9.61-9.61 0-.61-.06-1.22-.16-1.785H12.24Z" />
-            </svg>
-            Continue with Google
-          </button>
-
-          <p className="text-center text-xs text-slate-500 mt-5">
-            Don't have an admin account?{' '}
-            <button 
-              type="button"
-              onClick={() => navigate('/register')}
-              className="text-cyan-400 hover:underline font-semibold"
-            >
-              Register
-            </button>
-          </p>
         </motion.div>
       </div>
 

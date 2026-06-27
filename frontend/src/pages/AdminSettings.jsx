@@ -123,7 +123,7 @@ const AdminSettings = () => {
     setSmtpTesting(true);
     setSmtpResult(null);
     try {
-      const res = await api.post('/test-email', { email: smtpTestEmail });
+      const res = await api.post('/email/test', { email: smtpTestEmail });
       setSmtpResult({ success: true, ...res.data });
       showToast('✅ SMTP test passed! Email sent successfully.', 'success');
     } catch (err) {

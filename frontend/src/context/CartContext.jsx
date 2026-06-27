@@ -31,7 +31,7 @@ export const CartProvider = ({ children }) => {
   };
   const clearCart = () => setCart([]);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.daily_rate * item.qty, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.rental_price || item.daily_rate || 0) * item.qty, 0);
 
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, cartCount, cartTotal }}>

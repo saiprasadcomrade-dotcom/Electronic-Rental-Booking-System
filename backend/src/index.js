@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const Database = require('better-sqlite3');
@@ -23,6 +23,10 @@ const db = new Database(dbPath);
 
 app.use(cors());
 app.use(express.json());
+
+// Serve the frontend static files
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
 
 // Helper: Log activity
 function logActivity(action, module, details) {
@@ -76,8 +80,28 @@ try {
   console.error('Failed to sync device stocks on startup:', err.message);
 }
 
-// ─── SMTP DIAGNOSTICS ENDPOINT ───────────────────────────────────────────────
-app.post('/api/test-email', async (req, res) => {
+// ─── SMTP DIAGNOSTICS & HEALTH ENDPOINTS ───────────────────────────────────────────────
+app.get('/api/email/health', async (req, res) => {
+  const dns = require('dns').promises;
+  let dnsStatus = false;
+  try {
+    await dns.resolve('smtp.gmail.com');
+    dnsStatus = true;
+  } catch (err) {}
+
+  res.json({
+    status: 'Operational',
+    smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    smtp_port: process.env.SMTP_PORT || '587',
+    dns_status: dnsStatus ? 'Resolved' : 'Failed',
+    authentication_status: (process.env.EMAIL_USER && process.env.EMAIL_PASS) ? 'Configured' : 'Missing',
+    resend_api_status: process.env.RESEND_API_KEY ? 'Configured' : 'Missing',
+    email_provider: process.env.RESEND_API_KEY ? 'Resend (Fallback)' : 'Gmail SMTP',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post(['/api/email/test', '/api/test-email'], async (req, res) => {
   const { email } = req.body;
 
   // Build full diagnostic report regardless of success/failure
@@ -103,6 +127,18 @@ app.post('/api/test-email', async (req, res) => {
     dotenv_path:         require('path').join(__dirname, '../.env'),
     timestamp:           new Date().toISOString()
   };
+
+  const dns = require('dns').promises;
+  try {
+    const records = await dns.resolve(smtpHost);
+    diagnostics.dns_resolved = true;
+    diagnostics.dns_ips = records;
+    console.log(`[SMTP Diagnostics] DNS resolved ${smtpHost} to ${records.join(', ')}`);
+  } catch (err) {
+    diagnostics.dns_resolved = false;
+    diagnostics.dns_ips = [];
+    console.warn(`[SMTP Diagnostics] DNS resolution failed for ${smtpHost}:`, err.message);
+  }
 
   console.log('\n[SMTP Diagnostics] ─────────────────────────────────');
   console.log('[SMTP Diagnostics] EMAIL_USER:', emailUser || '(not set)');
@@ -146,24 +182,33 @@ HOW TO FIX — Generate a Google App Password:
     });
   }
 
-  // Attempt SMTP connection
+  // Attempt SMTP connection with Port 465 first
   const { getTransporter } = require('./notifications');
-  const transporter = getTransporter();
-
-  if (!transporter) {
+  let transporter;
+  try {
+    transporter = getTransporter(465, true);
+  } catch (err) {
     return res.status(400).json({
       success: false,
       step_failed: 'Transporter Creation',
-      error: 'Failed to create SMTP transporter. Check EMAIL_USER and EMAIL_PASS in .env',
+      error: err.message,
       diagnostics
     });
   }
 
   try {
-    // Step 1: Verify SMTP connection
-    console.log('[SMTP Diagnostics] Verifying SMTP connection...');
-    await transporter.verify();
-    console.log('[SMTP Diagnostics] ✅ SMTP connection verified successfully!');
+    // Step 1: Verify SMTP connection on Port 465
+    console.log('[SMTP Diagnostics] Verifying SMTP connection on Port 465...');
+    try {
+      await transporter.verify();
+      diagnostics.smtp_port = '465';
+    } catch (verifyErr) {
+      console.warn(`[SMTP Diagnostics] Port 465 failed: ${verifyErr.message}. Falling back to Port 587...`);
+      transporter = getTransporter(587, false, true);
+      await transporter.verify();
+      diagnostics.smtp_port = '587';
+    }
+    console.log(`[SMTP Diagnostics] ✅ SMTP connection verified successfully on Port ${diagnostics.smtp_port}!`);
     diagnostics.smtp_connected = true;
 
     // Step 2: Send test email
@@ -228,12 +273,46 @@ HOW TO FIX — Generate a Google App Password:
     } else if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
       fixHint = 'Cannot reach Gmail SMTP. Check your internet connection and firewall.';
     } else if (error.message.includes('ETIMEDOUT')) {
-      fixHint = 'Connection timed out. Check that port 587 is not blocked by your firewall or ISP.';
+      fixHint = 'Connection timed out on both ports 465 and 587. Check that SMTP outbound traffic is not blocked by your firewall, antivirus, or ISP.';
     } else {
       fixHint = 'Unknown SMTP error. Check the full error stack below.';
     }
 
     console.error('[SMTP Diagnostics] ❌ SMTP Error:', error.message);
+    
+    // Step 3: Resend API Fallback
+    if (process.env.RESEND_API_KEY) {
+      console.log('[SMTP Diagnostics] 🔄 Attempting Resend API Fallback...');
+      try {
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        await resend.emails.send({
+          from: `"One Point Solutions" <onboarding@resend.dev>`,
+          to: email,
+          subject: '✅ ERBS SMTP Test — Email Working Correctly (via Resend)',
+          html: `<p>Your email was sent successfully using the Resend REST API Fallback!</p>`
+        });
+        
+        diagnostics.resend_fallback_used = true;
+        diagnostics.resend_status = 'Success';
+        
+        return res.json({
+          success: true,
+          message: `✅ Test email sent to ${email} via Resend Fallback`,
+          smtp_authenticated: false,
+          diagnostics
+        });
+      } catch (resendErr) {
+        console.error('[SMTP Diagnostics] ❌ Resend Error:', resendErr.message);
+        diagnostics.resend_fallback_used = true;
+        diagnostics.resend_status = 'Failed';
+        fixHint = 'Both SMTP and Resend API failed. Check your RESEND_API_KEY.';
+      }
+    } else {
+      fixHint += ' 💡 SUGGESTION: Set RESEND_API_KEY in .env to bypass SMTP firewall blocks.';
+    }
+
     logActivity('SMTP Test Failed', 'Settings', `SMTP test failed: ${error.message}`);
 
     res.status(500).json({
@@ -331,12 +410,12 @@ app.post('/api/auth/login', (req, res) => {
     const admin = db.prepare('SELECT * FROM admins WHERE email = ?').get(email);
     if (!admin) {
       logActivity('Unauthorized Login Attempt', 'Auth', `Failed login attempt with email: ${email}`);
-      return res.status(403).json({ error: 'You are not supposed to access this application.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     if (admin.password !== password) {
       logActivity('Failed Login Attempt', 'Auth', `Incorrect password entered for ${email}`);
-      return res.status(401).json({ error: 'Invalid admin credentials.' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     logActivity('Admin Login', 'Auth', `Successful admin authentication for ${email}`);
@@ -1545,7 +1624,11 @@ app.post(['/payment/success', '/api/payment/success'], async (req, res) => {
   }
 });
 
+// SPA Fallback Route (Must be last)
+app.get(/(.*)/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../../../frontend/dist/index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-

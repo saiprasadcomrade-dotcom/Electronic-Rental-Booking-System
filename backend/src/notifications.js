@@ -42,44 +42,42 @@ function logActivity({ action, module, details }) {
  * Get nodemailer transporter configured with environment variables.
  * Uses Gmail-specific TLS settings for compatibility.
  */
-function getTransporter() {
+function getTransporter(portOverride, secureOverride, requireTLSOverride) {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
+  const port = portOverride !== undefined ? portOverride : parseInt(process.env.SMTP_PORT || '587');
+  const isSecure = secureOverride !== undefined ? secureOverride : (process.env.SMTP_SECURE === 'true' || port === 465);
 
   if (!user || !pass) {
-    console.warn('[SMTP] EMAIL_USER or EMAIL_PASS not set in .env');
-    return null;
+    throw new Error('SMTP credentials missing. Process.env.EMAIL_USER or EMAIL_PASS is not defined.');
   }
 
   if (pass === 'YOUR_16_CHAR_APP_PASSWORD_HERE' || pass === 'admin@123') {
-    console.warn('[SMTP] ⚠️  Invalid EMAIL_PASS detected. Please set a valid Google App Password in .env');
-    console.warn('[SMTP] Steps: myaccount.google.com → Security → 2-Step Verification → App Passwords');
-    return null;
+    throw new Error('EMAIL_PASS is set to a placeholder value. Please set a valid Google App Password.');
   }
 
   console.log(`[SMTP] Configuring transporter: ${user} via ${host}:${port} (secure=${isSecure})`);
-
-  return nodemailer.createTransport({
+  
+  const config = {
     host,
     port,
     secure: isSecure,
-    auth: {
-      user,
-      pass
-    },
+    auth: { user, pass },
     tls: {
-      // Required for Gmail on port 587 (STARTTLS)
       rejectUnauthorized: false,
       ciphers: 'SSLv3'
     },
-    // Increase timeouts for slow connections
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
     socketTimeout: 30000
-  });
+  };
+
+  if (requireTLSOverride !== undefined) {
+    config.requireTLS = requireTLSOverride;
+  }
+
+  return nodemailer.createTransport(config);
 }
 
 /**
@@ -109,12 +107,12 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
     return { success: false, status: 'Failed', error: errMsg };
   }
 
-  const transporter = getTransporter();
-
-  if (!transporter) {
-    const errMsg = 'SMTP credentials missing or invalid in .env. Please set a valid Google App Password.';
+  let transporter;
+  try {
+    transporter = getTransporter();
+  } catch (err) {
+    const errMsg = err.message;
     console.warn(`[SMTP Warning] ${errMsg}`);
-    console.warn('[SMTP] Generate App Password: https://myaccount.google.com/apppasswords');
     logNotification({
       customer_name: customerName,
       phone: '',
@@ -127,13 +125,76 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
     return { success: false, status: 'Not Configured', error: errMsg };
   }
 
-  try {
-    await transporter.verify();
-    console.log('[SMTP Log] SMTP Connected');
-  } catch (verifyErr) {
-    console.error('[SMTP Log] Email Failed');
-    console.error('[SMTP Log] SMTP Error:', verifyErr.message);
-    console.error('[SMTP Log] Stack Trace:', verifyErr.stack);
+  // --- Implement 1-Time Retry Logic (Step 10) ---
+  const MAX_RETRIES = 1;
+  let attempt = 0;
+  let lastVerifyErr = null;
+
+  while (attempt <= MAX_RETRIES) {
+    try {
+      console.log(`[SMTP Log] Attempt ${attempt + 1}: Verifying SMTP Connection...`);
+      await transporter.verify();
+      console.log('[SMTP Log] SMTP Connected successfully!');
+      lastVerifyErr = null;
+      break; // Success, exit retry loop
+    } catch (verifyErr) {
+      lastVerifyErr = verifyErr;
+      console.error(`[SMTP Log] Verification Attempt ${attempt + 1} Failed:`, verifyErr.message);
+      
+      if (attempt < MAX_RETRIES) {
+        console.log(`[SMTP Log] Falling back to Port 587 with STARTTLS in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        transporter = getTransporter(587, false, true);
+      }
+      attempt++;
+    }
+  }
+
+  // If all verify retries failed, attempt REST API Fallback
+  if (lastVerifyErr) {
+    console.warn('[SMTP Log] Gmail SMTP Failed completely. Attempting HTTP REST API Fallback (Resend)...');
+    
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        console.log('[SMTP Log] Sending via Resend REST API...');
+        await resend.emails.send({
+          from: `"One Point Solutions" <onboarding@resend.dev>`, // Standard Resend testing domain
+          to,
+          subject,
+          html: htmlContent
+        });
+        
+        console.log('[SMTP Log] Email Sent Successfully via Resend API');
+        logNotification({
+          customer_name: customerName,
+          phone: '',
+          email: to,
+          type,
+          channel: 'Email',
+          status: 'Sent',
+          message_preview: `[REST Fallback] ${subject}`
+        });
+        logActivity({
+          action: 'Email Sent',
+          module: 'Notifications',
+          details: `Successfully sent ${type} email to ${to} via Resend REST API`
+        });
+        return { success: true, status: 'Sent via Resend' };
+      } catch (resendErr) {
+        console.error('[SMTP Log] Resend API Failed:', resendErr.message);
+        // Continue to regular failure handling
+        lastVerifyErr = new Error(`Both SMTP and Resend API failed. SMTP: ${lastVerifyErr.message} | Resend: ${resendErr.message}`);
+      }
+    } else {
+      console.warn('[SMTP Log] Resend API Key not found. Cannot perform fallback.');
+    }
+
+    console.error('[SMTP Log] Email Failed - Exhausted Retries and Fallbacks');
+    console.error('[SMTP Log] SMTP Error:', lastVerifyErr.message);
+    console.error('[SMTP Log] Stack Trace:', lastVerifyErr.stack);
     logNotification({
       customer_name: customerName,
       phone: '',
@@ -141,9 +202,9 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
       type,
       channel: 'Email',
       status: 'Failed',
-      message_preview: `Verify Failed: ${verifyErr.message}`
+      message_preview: `Verify Failed: ${lastVerifyErr.message}`
     });
-    return { success: false, status: 'Failed', error: verifyErr.message, stack: verifyErr.stack };
+    return { success: false, status: 'Failed', error: lastVerifyErr.message, stack: lastVerifyErr.stack };
   }
 
   const mailOptions = {
@@ -153,10 +214,10 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
     html: htmlContent
   };
 
-  let attempt = 1;
+  let sendAttempt = 1;
   const maxAttempts = 2; // initial send + 1 retry
 
-  while (attempt <= maxAttempts) {
+  while (sendAttempt <= maxAttempts) {
     try {
       await transporter.sendMail(mailOptions);
       console.log('[SMTP Log] Email Sent Successfully');
@@ -176,8 +237,8 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
       });
       return { success: true, status: 'Sent' };
     } catch (err) {
-      console.error(`[SMTP Log] Attempt ${attempt} failed to send email to ${to}:`, err.message);
-      if (attempt === maxAttempts) {
+      console.error(`[SMTP Log] Attempt ${sendAttempt} failed to send email to ${to}:`, err.message);
+      if (sendAttempt === maxAttempts) {
         console.error('[SMTP Log] Email Failed');
         console.error('[SMTP Log] SMTP Error:', err.message);
         console.error('[SMTP Log] Stack Trace:', err.stack);
@@ -197,8 +258,8 @@ async function sendEmailWithRetry({ to, subject, htmlContent, customerName, type
         });
         return { success: false, status: 'Failed', error: err.message, stack: err.stack };
       }
-      attempt++;
-      console.log(`[SMTP Log] Retrying sending email to ${to} (Attempt ${attempt})...`);
+      sendAttempt++;
+      console.log(`[SMTP Log] Retrying sending email to ${to} (Attempt ${sendAttempt})...`);
     }
   }
 }

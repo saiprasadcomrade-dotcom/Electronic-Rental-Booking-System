@@ -47,20 +47,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password) => {
-    try {
-      const res = await api.post('/auth/register', { name, email, password });
-      const { token, user: userData } = res.data;
-      
-      localStorage.setItem('erbs_admin_token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(userData);
-      return userData;
-    } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Registration failed. Please try again.';
-      throw new Error(errorMsg);
-    }
-  };
+
 
   const loginWithGoogle = () => {
     setShowGoogleModal(true);
@@ -97,7 +84,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, loginWithGoogle, changePassword, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, changePassword, loading }}>
       {children}
       {showGoogleModal && (
         <GoogleModalOverlay

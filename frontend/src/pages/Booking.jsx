@@ -118,7 +118,8 @@ const Booking = () => {
 
   if (!device) return <div className="text-center mt-10 text-red-500 font-medium">Device not found</div>;
 
-  const totalPrice = device.daily_rate * rentalDays * formData.quantity;
+  const deviceRate = device.rental_price || device.daily_rate || 0;
+  const totalPrice = deviceRate * rentalDays * formData.quantity;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -141,7 +142,7 @@ const Booking = () => {
                 >
                   {allDevices.map(d => (
                     <option key={d.id} value={d.id}>
-                      {d.name} (₹{d.daily_rate}/day)
+                      {d.name} (₹{d.rental_price || d.daily_rate || 0}/day)
                     </option>
                   ))}
                 </select>
@@ -167,11 +168,11 @@ const Booking = () => {
             <div className="border-t border-slate-800/80 pt-4 space-y-2.5 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-semibold">Daily Rate</span>
-                <span className="text-base font-black text-white">₹{device.daily_rate}</span>
+                <span className="text-base font-black text-white">₹{deviceRate}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-semibold">Available Units</span>
-                <span className="text-emerald-400 font-bold">{device.available_qty} / {device.total_qty}</span>
+                <span className="text-emerald-400 font-bold">{device.availableQuantity ?? device.available_qty ?? 0} / {device.totalQuantity ?? device.total_qty ?? 0}</span>
               </div>
             </div>
           </div>
@@ -282,7 +283,7 @@ const Booking = () => {
                 </div>
                 <div className="flex justify-between items-center text-slate-400">
                   <span>Daily Rate</span>
-                  <span className="font-semibold text-slate-200">₹{device.daily_rate}</span>
+                  <span className="font-semibold text-slate-200">₹{deviceRate}</span>
                 </div>
                 <div className="flex justify-between items-center text-base font-bold text-white border-t border-slate-850 pt-2 mt-2">
                   <span>Total Amount</span>

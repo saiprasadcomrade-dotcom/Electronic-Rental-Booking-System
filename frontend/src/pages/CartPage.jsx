@@ -62,7 +62,7 @@ const CartPage = () => {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-lg font-black text-white">₹{item.daily_rate}</p>
+                <p className="text-lg font-black text-white">₹{item.rental_price || item.daily_rate || 0}</p>
                 <p className="text-[10px] text-slate-500 font-semibold">/ day each</p>
               </div>
             </div>

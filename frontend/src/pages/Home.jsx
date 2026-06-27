@@ -42,15 +42,9 @@ const Home = () => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/login')}
-              className="px-5 py-2.5 bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
-            >
-              Sign In
-            </button>
-            <button 
-              onClick={() => navigate('/login?demo=true')}
               className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
             >
-              Live Demo
+              Login
             </button>
           </div>
         </div>
@@ -98,13 +92,7 @@ const Home = () => {
             onClick={() => navigate('/login')}
             className="px-7 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-500/25 active:scale-95 cursor-pointer"
           >
-            Admin Login
-          </button>
-          <button 
-            onClick={() => navigate('/login?demo=true')}
-            className="px-7 py-3 bg-slate-900 border border-slate-800 text-xs font-bold uppercase tracking-wider rounded-xl text-slate-300 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center gap-2"
-          >
-            Launch Live Demo <ArrowRight size={14} />
+            Login
           </button>
         </motion.div>
       </section>

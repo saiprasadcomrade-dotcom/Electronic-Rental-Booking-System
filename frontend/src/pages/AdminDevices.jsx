@@ -176,7 +176,7 @@ const AdminDevices = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const categories = ['All', 'Laptop', 'Camera', 'Drone', 'Audio', 'Gaming', 'Smartphone', 'Tablet', 'Display', 'VR', 'Lighting', 'Grip', 'Accessories', 'Printer'];
+  const categories = ['All', 'Laptop', 'Camera', 'Drone', 'Tablet', 'Projector', 'Speaker', 'Gaming Console', 'Virtual Reality', 'Smart TV', 'Audio', 'Gaming', 'Smartphone', 'Display', 'VR', 'Lighting', 'Grip', 'Accessories', 'Printer'];
 
   return (
     <div className="space-y-6 text-slate-700 animate-fade-in">
