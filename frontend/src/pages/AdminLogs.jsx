@@ -15,7 +15,7 @@ const AdminLogs = () => {
     const fetchLogs = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/activity-logs');
+        const res = await api.get('/system-events');
         setLogs(res.data);
       } catch (err) {
         showToast('Failed to load activity logs.', 'error');

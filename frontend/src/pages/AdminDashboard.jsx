@@ -30,7 +30,7 @@ const AdminDashboard = () => {
       try {
         const [summaryRes, logsRes, paymentsRes, rentalsRes] = await Promise.all([
           api.get('/reports/summary'),
-          api.get('/activity-logs'),
+          api.get('/system-events'),
           api.get('/payments'),
           api.get('/rentals')
         ]);

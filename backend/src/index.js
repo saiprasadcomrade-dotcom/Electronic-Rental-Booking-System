@@ -1275,7 +1275,7 @@ app.get('/api/notifications', (req, res) => {
   }
 });
 
-app.get('/api/activity-logs', (req, res) => {
+app.get('/api/system-events', (req, res) => {
   try {
     const logs = db.prepare('SELECT * FROM activity_logs ORDER BY created_at DESC').all();
     res.json(logs);
