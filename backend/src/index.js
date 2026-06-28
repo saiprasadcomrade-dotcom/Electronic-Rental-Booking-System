@@ -38,12 +38,12 @@ if (needsInit) {
   try {
     db.prepare(`
       INSERT INTO settings (id, company_name, company_logo, company_email, company_phone, company_address, company_website, company_support_email, company_whatsapp, admin_password)
-      VALUES (1, 'One Point Solutions', '', 'onepointsolutions16@gmail.com', '+91 98765 43210', '123 Tech Park, Bangalore, India', 'www.onepointsolutions.com', 'support@onepointsolutions.com', '+91 98765 43210', 'admin@123')
+      VALUES (1, 'One Point Solutions', '', 'onepointsolutions16@gmail.com', '+91 98765 43210', '123 Tech Park, Bangalore, India', 'www.onepointsolutions.com', 'support@onepointsolutions.com', '+91 98765 43210', 'onepoint123')
     `).run();
 
     db.prepare(`
       INSERT INTO admins (name, email, password, googleId, avatarUrl)
-      VALUES ('One Point Solutions', 'onepointsolutions16@gmail.com', 'admin@123', NULL, NULL)
+      VALUES ('One Point Solutions', 'onepointsolutions16@gmail.com', 'onepoint123', NULL, NULL)
     `).run();
     console.log("Database schema and default admin initialized successfully!");
   } catch (err) {
@@ -141,7 +141,7 @@ app.post(['/api/email/test', '/api/test-email'], async (req, res) => {
   const smtpPort   = process.env.SMTP_PORT   || '587';
   const smtpSecure = process.env.SMTP_SECURE || 'false';
 
-  const isPlaceholder = emailPass === 'YOUR_16_CHAR_APP_PASSWORD_HERE' || emailPass === 'admin@123' || emailPass === '';
+  const isPlaceholder = emailPass === 'YOUR_16_CHAR_APP_PASSWORD_HERE' || emailPass === 'onepoint123' || emailPass === 'admin@123' || emailPass === '';
   const isAppPasswordFormat = /^[a-z]{16}$/.test(emailPass.replace(/\s/g, ''));
 
   const diagnostics = {

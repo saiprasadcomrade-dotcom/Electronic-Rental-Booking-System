@@ -150,6 +150,7 @@ const AdminRentals = () => {
       rental_amount: rental.rental_amount,
       deposit_amount: rental.deposit_amount,
       payment_method: rental.payment_method,
+      payment_status: rental.payment_status || 'Paid',
       notes: rental.notes || '',
       quantity: rental.quantity || 1
     });
@@ -667,6 +668,19 @@ const AdminRentals = () => {
                     <option value="Cash">Cash</option>
                     <option value="Card">Card</option>
                     <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Payment Status</label>
+                  <select
+                    value={formData.payment_status || 'Paid'}
+                    onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-cyan-500 focus:bg-white text-slate-705"
+                  >
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Waived">Waived</option>
                   </select>
                 </div>
 

@@ -53,7 +53,7 @@ function getTransporter(portOverride, secureOverride, requireTLSOverride) {
     throw new Error('SMTP credentials missing. Process.env.EMAIL_USER or EMAIL_PASS is not defined.');
   }
 
-  if (pass === 'YOUR_16_CHAR_APP_PASSWORD_HERE' || pass === 'admin@123') {
+  if (pass === 'YOUR_16_CHAR_APP_PASSWORD_HERE' || pass === 'onepoint123') {
     throw new Error('EMAIL_PASS is set to a placeholder value. Please set a valid Google App Password.');
   }
 

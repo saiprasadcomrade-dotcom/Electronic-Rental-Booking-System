@@ -11,7 +11,7 @@ async function runSmtpWorkflowTests() {
     console.log('Test 1: Logging in with valid admin credentials...');
     const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
       email: 'onepointsolutions16@gmail.com',
-      password: 'admin@123'
+      password: 'onepoint123'
     });
     authToken = loginRes.data.token;
     const authHeaders = { headers: { Authorization: `Bearer ${authToken}` } };

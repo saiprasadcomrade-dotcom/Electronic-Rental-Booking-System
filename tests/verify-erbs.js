@@ -12,7 +12,7 @@ async function runTests() {
     try {
       await axios.post(`${BASE_URL}/auth/login`, {
         email: 'invalid@gmail.com',
-        password: 'admin@123'
+        password: 'onepoint123'
       });
       console.error('FAIL: Login with unallowed Gmail incorrectly succeeded!');
     } catch (err) {
@@ -35,7 +35,7 @@ async function runTests() {
     console.log('\nTest 3: Logging in with valid admin credentials...');
     const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
       email: 'onepointsolutions16@gmail.com',
-      password: 'admin@123'
+      password: 'onepoint123'
     });
     authToken = loginRes.data.token;
     console.log(`PASS: Authenticated successfully! Token: ${authToken}`);

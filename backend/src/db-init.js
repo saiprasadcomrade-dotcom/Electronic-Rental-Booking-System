@@ -36,14 +36,14 @@ console.log('Schema loaded successfully.');
 console.log('Seeding default settings...');
 db.prepare(`
   INSERT INTO settings (id, company_name, company_logo, company_email, company_phone, company_address, company_website, company_support_email, company_whatsapp, admin_password)
-  VALUES (1, 'One Point Solutions', '', 'onepointsolutions16@gmail.com', '+91 98765 43210', '123 Tech Park, Bangalore, India', 'www.onepointsolutions.com', 'support@onepointsolutions.com', '+91 98765 43210', 'admin@123')
+  VALUES (1, 'One Point Solutions', '', 'onepointsolutions16@gmail.com', '+91 98765 43210', '123 Tech Park, Bangalore, India', 'www.onepointsolutions.com', 'support@onepointsolutions.com', '+91 98765 43210', 'onepoint123')
 `).run();
 
 // Seed Admins
 console.log('Seeding default admin...');
 db.prepare(`
   INSERT INTO admins (name, email, password, googleId, avatarUrl)
-  VALUES ('One Point Solutions', 'onepointsolutions16@gmail.com', 'admin@123', NULL, NULL)
+  VALUES ('One Point Solutions', 'onepointsolutions16@gmail.com', 'onepoint123', NULL, NULL)
 `).run();
 
 // Seed Customers

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS settings (
     company_website TEXT DEFAULT 'www.onepointsolutions.com',
     company_support_email TEXT DEFAULT 'support@onepointsolutions.com',
     company_whatsapp TEXT DEFAULT '+91 98765 43210',
-    admin_password TEXT DEFAULT 'admin@123',
+    admin_password TEXT DEFAULT 'onepoint123',
     
     -- WhatsApp/SMS Configurations
     whatsapp_provider TEXT DEFAULT 'Meta',
